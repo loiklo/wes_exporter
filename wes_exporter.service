@@ -1,0 +1,14 @@
+# Example of Systemd service
+
+[Unit]
+  Description=wes-exporter
+  After=time-sync.target
+[Service]
+  User=autometrics
+  Group=autometrics
+  ExecStart=/usr/share/autometrics/prometheus_wes_exporter/wes_exporter.py
+  WorkingDirectory=/usr/share/autometrics/systemd_working_dir/prometheus_wes_exporter
+  Restart=on-failure
+  RestartSec=10
+[Install]
+  WantedBy=multi-user.target
