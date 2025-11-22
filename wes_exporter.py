@@ -7,7 +7,6 @@ from prometheus_client import start_http_server, Gauge, Counter, Enum
 import requests
 import xmltodict
 import re
-import pprint
 
 re_pceval_amps = re.compile("<value>([0-9.]*) A</value>")
 re_pceval_watts_cosphi = re.compile("<value>([0-9.]*) W cos phi ([0-9.]*)</value>")
