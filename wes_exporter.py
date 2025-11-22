@@ -7,12 +7,13 @@ from prometheus_client import start_http_server, Gauge, Counter, Enum
 import requests
 import xmltodict
 import re
+import pprint
 
 re_pceval_amps = re.compile("<value>([0-9.]*) A</value>")
 re_pceval_watts_cosphi = re.compile("<value>([0-9.]*) W cos phi ([0-9.]*)</value>")
 re_pceval_kwh = re.compile("<value>([0-9.]*) kWh</value>")
 
-tic_ptec_options = ["H. Creuse BLEU", "H. Pleine BLEU", "H. Creuse BLANC", "H. Pleine BLANC", "H. Creuse ROUGE", "H. Pleine ROUGE", "Inconnu"]
+tic_ptec_options = ["H. Creuse BLEU", "H. Pleine BLEU", "H. Creuse BLANC", "H. Pleine BLANC", "H. Creuse ROUGE", "H. Pleine ROUGE", "Inconnu", "H. Creuses", "H. Pleines"]
 tic_demain_options = ["Jour BLEU", "Jour BLANC", "Jour ROUGE", "Inconnu"]
 
 class AppMetrics:
@@ -65,8 +66,8 @@ class AppMetrics:
 
         # Fetch raw status data from the application
         #resp = requests.get(url=f"http://localhost:{self.app_port}/status")
-        resp_data_xml = requests.get(url=f"http://admin:wes@192.168.0.200/DATA.CGX")
-        resp_pceval_html = requests.get(url=f"http://admin:wes@192.168.0.200/WEBPROG/CGX/PCEVAL.CGX")
+        resp_data_xml = requests.get(url=f"http://admin:wes@wes.bty.loiklo.net/DATA.CGX")
+        resp_pceval_html = requests.get(url=f"http://admin:wes@wes.bty.loiklo.net/WEBPROG/CGX/PCEVAL.CGX")
         resp_data = xmltodict.parse(resp_data_xml.content)
 
         #print(resp_pceval_html.content.decode())
@@ -78,13 +79,24 @@ class AppMetrics:
           self.tic_isoucs.labels(id=i).set(resp_data["data"][f"tic{i}"]["ISOUSC"])
           self.tic_pap.labels(id=i).set(resp_data["data"][f"tic{i}"]["PAP"])
           self.tic_iinst.labels(id=i).set(resp_data["data"][f"tic{i}"]["IINST"])
-          self.tic_index.labels(id=i, option="base",  color="none",  phase="none")._value.set(resp_data["data"][f"tic{i}"]["BASE"])
-          self.tic_index.labels(id=i, option="tempo", color="blue",  phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJB"])
-          self.tic_index.labels(id=i, option="tempo", color="blue",  phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJB"])
-          self.tic_index.labels(id=i, option="tempo", color="white", phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJW"])
-          self.tic_index.labels(id=i, option="tempo", color="white", phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJW"])
-          self.tic_index.labels(id=i, option="tempo", color="red",   phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJR"])
-          self.tic_index.labels(id=i, option="tempo", color="red",   phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJR"])
+          if "BASE" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="base",  color="none",  phase="none")._value.set(resp_data["data"][f"tic{i}"]["BASE"])
+          if "BBRHCJB" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="blue",  phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJB"])
+          if "BBRHPJB" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="blue",  phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJB"])
+          if "BBRHCJW" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="white", phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJW"])
+          if "BBRHPJW" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="white", phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJW"])
+          if "BBRHCJR" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="red",   phase="hc")._value.set(resp_data["data"][f"tic{i}"]["BBRHCJR"])
+          if "BBRHPJR" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="tempo", color="red",   phase="hp")._value.set(resp_data["data"][f"tic{i}"]["BBRHPJR"])
+          if "H_PLEINE" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="hphc", color="none",   phase="hp")._value.set(resp_data["data"][f"tic{i}"]["H_PLEINE"])
+          if "H_CREUSE" in resp_data["data"][f"tic{i}"]:
+            self.tic_index.labels(id=i, option="hphc", color="none",   phase="hc")._value.set(resp_data["data"][f"tic{i}"]["H_CREUSE"])
 
         # Entree a impulsion
         for i in range(1,5):
@@ -99,7 +111,7 @@ class AppMetrics:
           self.pince_cosphi.labels(id=i).set(pceval_watts_cosphi[i-1][1])
           self.pince_kwh.labels(id=i)._value.set(pceval_kwh[i-1])
 
-        self.v.set(resp_data["data"]["pince"]["V"])
+        self.v.set(resp_data["data"]["tic1"]["TENSION1"])
 
         if resp_data["data"]["tic1"]["PTEC"] in tic_ptec_options:
           self.tic_ptec.state(resp_data["data"]["tic1"]["PTEC"])
@@ -116,6 +128,10 @@ class AppMetrics:
               self.tic_ptec_num.set(4)
             case "H. Pleine ROUGE":
               self.tic_ptec_num.set(5)
+            case "H. Creuses":
+              self.tic_ptec_num.set(6)
+            case "H. Pleines":
+              self.tic_ptec_num.set(7)
         else:
           self.tic_ptec.state("Inconnu")
           self.tic_ptec_num.set(-1)
@@ -142,7 +158,7 @@ class AppMetrics:
 def main():
     """Main entry point"""
 
-    polling_interval_seconds = int(os.getenv("POLLING_INTERVAL_SECONDS", "2"))
+    polling_interval_seconds = int(os.getenv("POLLING_INTERVAL_SECONDS", "3"))
     app_port = int(os.getenv("APP_PORT", "80"))
     exporter_port = int(os.getenv("EXPORTER_PORT", "9877"))
 
